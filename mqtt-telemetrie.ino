@@ -150,23 +150,22 @@ void mqttPublishData() {
   float v3 = adcValue2milliVolt(adc3);
 
   // correct mesured values due to resistors used to scale down high voltages ...
-  /*
-  v0 *= 1.3929;
-  v1 *= 2.7857;
-  v2 *= 4.0303;
-  v3 *= 5.5455;
-  */
-
-  // calculate voltages per cell by subtracting the next lower value ...
-  //v3 -= v2;
-  //v2 -= v1;
-  //v1 -= v0;
+  v0 *= 1.0; // gnd
+  v1 *= 1.4239; // cell1
+  v2 *= 2.9833; // cell2
+  v3 *= 4.1371; // cell3
   
+  // calculate voltages per cell by subtracting the next lower value ...
+  v3 -= v2;
+  v2 -= v1;
+  // v1 -= v0; // nothing to todo here ...
+
+  publishString(mqttTopicStatus, "1");
   publishLong(mqttTopicCounter, counter);
-  publishFloat(mqttTopicValue0, v0 / 1000);
-  publishFloat(mqttTopicValue1, v1 / 1000);
-  publishFloat(mqttTopicValue2, v2 / 1000);
-  publishFloat(mqttTopicValue3, v3 / 1000);
+  publishFloat(mqttTopicValue0, v1 / 1000);
+  publishFloat(mqttTopicValue1, v2 / 1000);
+  publishFloat(mqttTopicValue2, v3 / 1000);
+  publishFloat(mqttTopicValue3, v0 / 1000);
   
   shortFlashLed();
 }
