@@ -26,10 +26,15 @@ const char *mqttTopicValue3 = "your Topic/value/3";
 const char *lastWillMessage = "0"; // the last will message show clients that we are offline
 const int PUBLISH_DELAY = 1000; //milliseconds
 const int TIMEOUT = 3; // seconds
+const int MIN_MIN_VALUE = 50; // 0.05v
 
 // Variables ...
 long lastPublish = 0;
 long counter = 0;
+float min0 = 99999;
+float min1 = 99999;
+float min2 = 99999;
+float min3 = 99999;
 
 WiFiClient   espClient;
 PubSubClient mqttClient(espClient);
@@ -123,7 +128,13 @@ void checkMqtt() {
         Serial.println("connected");
         //mqttClient.subscribe(mqttTopicIn);
         flashLed();
-        publishString(mqttTopicStatus, "1");
+        publishString(mqttTopicStatus, "1", true);
+        if (counter == 0) {
+          publishFloat(mqttTopicMin0, 0.00);
+          publishFloat(mqttTopicMin1, 0.00);
+          publishFloat(mqttTopicMin2, 0.00);
+          publishFloat(mqttTopicMin3, 0.00);
+        }
       } else {
         Serial.print("MQTT connection failed, retry count: ");
         Serial.print(mqttClient.state());
@@ -160,12 +171,28 @@ void mqttPublishData() {
   v2 -= v1;
   // v1 -= v0; // nothing to todo here ...
 
-  publishString(mqttTopicStatus, "1");
   publishLong(mqttTopicCounter, counter);
   publishFloat(mqttTopicValue0, v1 / 1000);
   publishFloat(mqttTopicValue1, v2 / 1000);
   publishFloat(mqttTopicValue2, v3 / 1000);
   publishFloat(mqttTopicValue3, v0 / 1000);
+
+  if (v1 > MIN_MIN_VALUE && v1 < min1) {
+      min1 = v1;
+      publishFloat(mqttTopicMin0, min1 / 1000);
+  }
+  if (v2 > MIN_MIN_VALUE && v2 < min2) {
+      min2 = v2;
+      publishFloat(mqttTopicMin1, min2 / 1000);
+  }
+  if (v3 > MIN_MIN_VALUE && v3 < min3) {
+      min3 = v3;
+      publishFloat(mqttTopicMin2, min3 / 1000);
+  }
+  if (v0 > MIN_MIN_VALUE && v0 < min0) {
+      min0 = v0;
+      publishFloat(mqttTopicMin3, min0 / 1000);
+  }
   
   shortFlashLed();
 }
@@ -189,11 +216,11 @@ void publishFloat(const char* topic, float value) {
   mqttClient.publish(topic, charBufValue);
 }
 
-void publishString(const char* topic, String valueStr) {
+void publishString(const char* topic, String valueStr, boolean retain) {
   Serial.print("Publishing ");Serial.print(valueStr);Serial.print(" to topic ");Serial.print(topic);Serial.print(" (");Serial.print(mqttServer);Serial.println(")");
   char charBufValue[valueStr.length() + 1];
   valueStr.toCharArray(charBufValue, valueStr.length() + 1); //packaging up the data to publish to mqtt ...
-  mqttClient.publish(topic, charBufValue);
+  mqttClient.publish(topic, charBufValue, retain);
 }
 
 float adcValue2milliVolt(int16_t adcValue) {
